@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chainsaw Clicker</title>
+    <style>
+        body { background: #1a1a1a; color: #ff4500; font-family: 'Courier New', Courier, monospace; text-align: center; padding-top: 50px; }
+        #chainsaw { font-size: 100px; cursor: pointer; transition: transform 0.1s; display: inline-block; }
+        #chainsaw:active { transform: scale(0.9) rotate(-10deg); }
+        .stat { font-size: 24px; margin: 20px; }
+        button { background: #ff4500; border: none; padding: 10px 20px; color: white; cursor: pointer; border-radius: 5px; font-weight: bold; }
+        button:disabled { background: #555; }
+    </style>
+</head>
+<body>
+    <h1>CHAINSAW CLICKER</h1>
+    <div id="chainsaw" onclick="clickGame()">🪚</div>
+    <div class="stat">Fuel: <span id="score">0</span></div>
+    <div class="stat">Helpers: <span id="helpers">0</span></div>
+    <button id="buyBtn" onclick="buyHelper()">Hire Devil Hunter (Cost: 15)</button>
+
+    <script>
+        let score = 0; let helpers = 0; let cost = 15;
+        function clickGame() { score++; update(); }
+        function buyHelper() {
+            if (score >= cost) { score -= cost; helpers++; cost = Math.floor(cost * 1.5); update(); }
+        }
+        function update() {
+            document.getElementById('score').innerText = score;
+            document.getElementById('helpers').innerText = helpers;
+            document.getElementById('buyBtn').innerText = "Hire Devil Hunter (Cost: " + cost + ")";
+            document.getElementById('buyBtn').disabled = score < cost;
+        }
+        setInterval(() => { score += helpers; update(); }, 1000);
+    </script>
+</body>
+</html>
