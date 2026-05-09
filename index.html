@@ -65,7 +65,7 @@
                 gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1);
                 osc.start(); osc.stop(audioCtx.currentTime + 0.1);
             } else if (type === 'hit') {
-                osc.type = 'sawtooth';
+                const notes = [130.81, 146.83, 164.81, 196.00];
                 osc.frequency.setValueAtTime(80, audioCtx.currentTime);
                 osc.frequency.linearRampToValueAtTime(20, audioCtx.currentTime + 0.15);
                 gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
