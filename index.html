@@ -1,38 +1,23 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Zombie.io | 3D Perspective Edition</title>
+    <title>Zombie.io | Survival Squad: Evolution Update</title>
     <style>
         body { background: #050505; color: #00ff00; font-family: 'Courier New', monospace; text-align: center; margin: 0; padding: 0; overflow: hidden; user-select: none; }
-        
-        /* This container forces everything inside into actual 3D perspective tilt! */
-        #game-wrapper {
-            perspective: 800px;
-            perspective-origin: 50% 30%;
-            width: 100vw;
-            height: 85vh;
-            display: none;
-        }
-        
-        canvas { 
-            background: #111411; 
-            border: 4px solid #ff3300; 
-            cursor: crosshair; 
-            margin: 40px auto; 
-            box-shadow: 0 20px 40px rgba(255, 51, 0, 0.5);
-            /* This rotates the flat canvas so it looks like a 3D floor map! */
-            transform: rotateX(45deg);
-            transform-style: preserve-3d;
-        }
-
+        #game-wrapper { perspective: 800px; perspective-origin: 50% 30%; width: 100vw; height: 85vh; display: none; }
+        canvas { background: #111411; border: 4px solid #ff3300; cursor: crosshair; margin: 40px auto; box-shadow: 0 20px 40px rgba(255, 51, 0, 0.5); transform: rotateX(45deg); transform-style: preserve-3d; }
         .screen { padding: 40px; max-width: 700px; margin: auto; height: 80vh; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        .char-btn { padding: 15px; margin: 8px; background: #1a1a1a; color: #00ff00; border: 2px solid #00ff00; cursor: pointer; font-size: 18px; width: 220px; text-transform: uppercase; font-weight: bold; }
+        .char-btn { padding: 15px; margin: 8px; background: #1a1a1a; color: #00ff00; border: 2px solid #00ff00; cursor: pointer; font-size: 16px; width: 240px; text-transform: uppercase; font-weight: bold; }
         .char-btn:hover { background: #00ff00; color: black; box-shadow: 0 0 15px #00ff00; }
-        #ui-box { background: rgba(0,0,0,0.9); padding: 12px; border-bottom: 3px solid #ff3300; display: none; justify-content: space-around; font-size: 18px; font-weight: bold; }
+        #ui-box { background: rgba(0,0,0,0.9); padding: 12px; border-bottom: 3px solid #ff3300; display: none; justify-content: space-around; font-size: 18px; font-weight: bold; align-items: center; }
         .btn-upgrade { background: #ff3300; color: white; border: none; padding: 8px 16px; cursor: pointer; font-weight: bold; border-radius: 4px; }
         .btn-upgrade:disabled { background: #444; color: #777; cursor: not-allowed; }
+        .btn-menu { background: #00ff00; color: black; border: none; padding: 8px 16px; cursor: pointer; font-weight: bold; border-radius: 4px; }
+        .btn-menu:hover { background: #00cc00; }
         #cutscene-text { font-size: 22px; line-height: 1.6; color: #ffffff; text-shadow: 0 0 8px #ff0000; min-height: 150px; }
         .next-btn { background: #fff; color: #000; border: none; padding: 10px 25px; font-size: 18px; cursor: pointer; font-weight: bold; margin-top: 20px; }
+        .hp-bar-container { width: 120px; background: #330000; border: 2px solid #ff0000; height: 16px; border-radius: 4px; display: inline-block; vertical-align: middle; }
+        #ui-hp-fill { width: 100%; background: #00ff00; height: 100%; transition: width 0.1s; }
     </style>
 </head>
 <body>
@@ -47,23 +32,25 @@
     <!-- CHARACTER SELECTION -->
     <div id="menu-screen" class="screen" style="display:none;">
         <h1>THE OUTBREAK HAS BEGUN</h1>
-        <h3>SELECT YOUR SURVIVOR:</h3>
-        <div style="display: flex; flex-wrap: wrap; justify-content: center; max-width: 500px;">
-            <button class="char-btn" onclick="startGame('Shuceeb', '#00ffff')">Shuceeb</button>
-            <button class="char-btn" onclick="startGame('Aadam', '#ff0055')">Aadam</button>
-            <button class="char-btn" onclick="startGame('Yakoub', '#ffcc00')">Yakoub</button>
-            <button class="char-btn" onclick="startGame('Daiyon', '#9900ff')">Daiyon</button>
-            <button class="char-btn" onclick="startGame('Arafat', '#00ff66')">Arafat</button>
-            <button class="char-btn" onclick="startGame('Naythan', '#ff6600')">Naythan</button>
+        <h3>SELECT YOUR SURVIVOR & PERK:</h3>
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; max-width: 600px;">
+            <button class="char-btn" onclick="startGame('Shuceeb', '#00ffff', 'speed')">Shuceeb (Super Speed)</button>
+            <button class="char-btn" onclick="startGame('Aadam', '#ff0055', 'tank')">Aadam (Heavy Armor)</button>
+            <button class="char-btn" onclick="startGame('Yakoub', '#ffcc00', 'looter')">Yakoub (Double Cash)</button>
+            <button class="char-btn" onclick="startGame('Daiyon', '#9900ff', 'tactical')">Daiyon (Gun Lvl 5 Start)</button>
+            <button class="char-btn" onclick="startGame('Arafat', '#00ff66', 'medic')">Arafat (Auto Heal)</button>
+            <button class="char-btn" onclick="startGame('Naythan', '#ff6600', 'lucky')">Naythan (Insta-Kill Chance)</button>
         </div>
     </div>
 
     <!-- GAME UI & ARENA -->
     <div id="ui-box">
+        <button class="btn-menu" onclick="returnToMenu()">MAIN MENU</button>
         <div>Survivor: <span id="ui-name" style="color:yellow;">---</span></div>
-        <div>Cash: $<span id="ui-cash">0</span></div>
+        <div>HP: <div class="hp-bar-container"><div id="ui-hp-fill"></div></div></div>
+        <div>Weapon: <span id="ui-weapon" style="color: #ffcc00;">Pistol</span></div>
         <div>Gun Level: <span id="ui-lvl">1</span>/100</div>
-        <div id="ui-ability" style="color: cyan;">No Perks Locked</div>
+        <div>Cash: $<span id="ui-cash">0</span></div>
         <button id="up-btn" class="btn-upgrade" onclick="buyUpgrade()">UPGRADE GUN ($50)</button>
     </div>
 
@@ -79,18 +66,16 @@
             const gain = audioCtx.createGain();
             osc.connect(gain); gain.connect(audioCtx.destination);
             if (type === 'shoot') {
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
-                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(lvl >= 10 ? 110 : 180, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.12);
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.12);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.12);
             } else if (type === 'hit') {
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(60, audioCtx.currentTime);
-                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+                osc.type = 'square'; osc.frequency.setValueAtTime(60, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.08);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.08);
             }
         }
 
@@ -98,7 +83,7 @@
             "Shuceeb, Aadam, Yakoub, Daiyon, Arafat, and Naythan were chilled out at their house playing games...",
             "Suddenly, the power cuts out and Mr. Trump appears on screen with an emergency broadcast!",
             "A rogue scientist accidentally cracked open a mysterious Alien Egg! Spores are turning people into monsters!",
-            "Grab your gear! It's time to defend the block!"
+            "Defeat the Milestone Bosses! Beware: zombies evolve permanently into mutant types after each tier!"
         ];
         let cutsceneIdx = 0;
         function nextCutscene() {
@@ -111,64 +96,153 @@
                 document.getElementById("menu-screen").style.display = "flex";
             }
         }
-        document.getElementById("cutscene-text").innerText = cutsceneLines[0];
+        document.getElementById("cutscene-text").innerText = cutsceneLines;
 
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
-        let cash = 445, lvl = 2, cost = 62;
-        let player = { x: 400, y: 275, size: 20, color: '#00ffff', speed: 4, angle: 0 };
-        let bullets = [], zombies = [], keys = {};
-        let mouseX = 0, mouseY = 0;
+        let cash = 0, lvl = 1, cost = 50, hp = 100, currentWeapon = "Pistol";
+        let player = { x: 400, y: 275, size: 20, color: '#00ffff', speed: 4, angle: 0, perk: '' };
+        let bullets = [], enemyBullets = [], zombies = [], bosses = [];
+        let keys = {}, mouseX = 0, mouseY = 0;
+        let isGameRunning = false, zombieInterval, medicInterval;
+        let bossActive = false;
+        
+        // Progression Tier Trackers
+        let tier1Defeated = false, tier2Defeated = false, tier3Defeated = false, tier4Defeated = false;
 
-        function startGame(name, color) {
-            player.color = color;
+        function startGame(name, color, perk) {
+            cash = 0; lvl = 1; cost = 50; hp = 100; currentWeapon = "Pistol";
+            bullets = []; enemyBullets = []; zombies = []; bosses = []; keys = {}; bossActive = false;
+            tier1Defeated = false; tier2Defeated = false; tier3Defeated = false; tier4Defeated = false;
+            player.x = 400; player.y = 275;
+            player.color = color; player.perk = perk;
+            player.speed = perk === 'speed' ? 5.5 : 4;
+            if (perk === 'tactical') { lvl = 5; cost = 120; }
+            
+            checkWeaponTier();
+            updateUI();
+
             document.getElementById("ui-name").innerText = name;
             document.getElementById("ui-name").style.color = color;
             document.getElementById("menu-screen").style.display = "none";
             document.getElementById("ui-box").style.display = "flex";
             document.getElementById("game-wrapper").style.display = "block";
-            spawnZombie();
+            
+            isGameRunning = true;
+            zombieInterval = setTimeout(spawnZombie, 1000);
+            if (perk === 'medic') medicInterval = setInterval(() => { if(hp < 100) { hp = Math.min(100, hp + 5); updateUI(); } }, 3000);
+            
             requestAnimationFrame(gameLoop);
+        }
+
+        function returnToMenu() {
+            isGameRunning = false;
+            clearTimeout(zombieInterval);
+            clearInterval(medicInterval);
+            document.getElementById("ui-box").style.display = "none";
+            document.getElementById("game-wrapper").style.display = "none";
+            document.getElementById("menu-screen").style.display = "flex";
         }
 
         function buyUpgrade() {
             if (cash >= cost && lvl < 100) {
                 cash -= cost; lvl++; cost = Math.floor(cost * 1.25);
-                if (lvl >= 10) player.speed = 6.5;
+                if (player.perk === 'speed') player.speed += 0.3;
+                else player.speed += 0.2;
+                
+                checkWeaponTier();
+                if (lvl % 10 === 0) triggerMilestoneBoss();
                 updateUI();
             }
         }
 
-        window.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
-        window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
-        
-        // This adjusts mouse math to compensate for the 3D screen tilt angle
+        function triggerMilestoneBoss() {
+            bossActive = true;
+            zombies = [];
+            let multiplier = lvl / 10;
+            bosses.push({ 
+                x: 400, y: -50, 
+                hp: 40 + (multiplier * 40), maxHp: 40 + (multiplier * 40), 
+                size: 35 + (multiplier * 5), speed: 0.6 + (multiplier * 0.1),
+                tier: multiplier
+            });
+        }
+
+        function checkWeaponTier() {
+            if (lvl >= 50) currentWeapon = "Mini-Gun";
+            else if (lvl >= 35) currentWeapon = "Laser Railgun";
+            else if (lvl >= 20) currentWeapon = "Plasma Rifle";
+            else if (lvl >= 10) currentWeapon = "Shotgun";
+            else currentWeapon = "Pistol";
+            document.getElementById("ui-weapon").innerText = currentWeapon;
+        }
+
+        window.addEventListener("keydown", e => { if(isGameRunning) keys[e.key.toLowerCase()] = true; });
+        window.addEventListener("keyup", e => { if(isGameRunning) keys[e.key.toLowerCase()] = false; });
         window.addEventListener("mousemove", e => {
             const rect = canvas.getBoundingClientRect();
             mouseX = e.clientX - rect.left;
             mouseY = (e.clientY - rect.top) * 1.4; 
         });
-        
-        canvas.addEventListener("mousedown", () => { fireWeapon(); });
+        canvas.addEventListener("mousedown", () => { if(isGameRunning) fireWeapon(); });
 
         function fireWeapon() {
             playSound('shoot');
             const baseAngle = Math.atan2(mouseY - player.y, mouseX - player.x);
-            bullets.push({ x: player.x, y: player.y, vx: Math.cos(baseAngle) * 8, vy: Math.sin(baseAngle) * 8 });
+            let bDamage = 1 + Math.floor(lvl / 8);
+
+            if (currentWeapon === "Pistol") {
+                bullets.push({ x: player.x, y: player.y, vx: Math.cos(baseAngle)*8, vy: Math.sin(baseAngle)*8, dmg: bDamage, color: "#ffff00", life: 1, size: 7 });
+            } 
+            else if (currentWeapon === "Shotgun") {
+                bullets.push({ x: player.x, y: player.y, vx: Math.cos(baseAngle-0.2)*8, vy: Math.sin(baseAngle-0.2)*8, dmg: bDamage, color: "#ff3300", life: 1, size: 6 });
+                bullets.push({ x: player.x, y: player.y, vx: Math.cos(baseAngle)*8, vy: Math.sin(baseAngle)*8, dmg: bDamage, color: "#ff3300", life: 1, size: 6 });
+                bullets.push({ x: player.x, y: player.y, vx: Math.cos(baseAngle+0.2)*8, vy: Math.sin(baseAngle+0.2)*8, dmg: bDamage, color: "#ff3300", life: 1, size: 6 });
+            } 
+            else if (currentWeapon === "Plasma Rifle") {
+                bullets.push({ x: player.x, y: player.y, vx: Math.cos(baseAngle)*10, vy: Math.sin(baseAngle)*10, dmg: bDamage * 1.5, color: "#00ffff", life: 1, size: 10 });
+            } 
+            else if (currentWeapon === "Laser Railgun") {
+                bullets.push({ x: player.x, y: player.y, vx: Math.cos(baseAngle)*12, vy: Math.sin(baseAngle)*12, dmg: bDamage * 2, color: "#00ff00", life: 4, size: 5 });
+            } 
+            else if (currentWeapon === "Mini-Gun") {
+                bullets.push({ x: player.x, y: player.y, vx: Math.cos(baseAngle-0.05)*11, vy: Math.sin(baseAngle-0.05)*11, dmg: bDamage, color: "magenta", life: 1, size: 6 });
+                bullets.push({ x: player.x, y: player.y, vx: Math.cos(baseAngle+0.05)*11, vy: Math.sin(baseAngle+0.05)*11, dmg: bDamage, color: "orange", life: 1, size: 6 });
+            }
         }
 
         function spawnZombie() {
-            let side = Math.floor(Math.random() * 4);
-            let z = { x: 0, y: 0 };
-            if(side === 0) { z.x = Math.random()*800; z.y = -30; }
-            else if(side === 1) { z.x = 830; z.y = Math.random()*550; }
-            else if(side === 2) { z.x = Math.random()*800; z.y = 580; }
-            else { z.x = -30; z.y = Math.random()*550; }
-            zombies.push(z);
-            setTimeout(spawnZombie, 1200);
+            if(!isGameRunning) return;
+            if(!bossActive) {
+                let side = Math.floor(Math.random() * 4);
+                let rand = Math.random();
+                
+                // Base setup
+                let z = { x: 0, y: 0, hp: 1 + Math.floor(lvl/6), maxHp: 1 + Math.floor(lvl/6), speed: 1.5, color: "#39e639", type: "normal", shootCooldown: 0 };
+                
+                if(side === 0) { z.x = Math.random()*800; z.y = -30; }
+                else if(side === 1) { z.x = 830; z.y = Math.random()*550; }
+                else if(side === 2) { z.x = Math.random()*800; z.y = 580; }
+                else { z.x = -30; z.y = Math.random()*550; }
+
+                // Evolved Archetype Roll Logic
+                if (tier4Defeated && rand < 0.12) {
+                    z.color = "#9900ff"; z.type = "purple_gunner"; z.speed = 1.3;
+                } else if (tier3Defeated && rand < 0.36) {
+                    z.color = "#ff6600"; z.type = "orange_brute"; z.hp *= 2.4; z.maxHp *= 2.4; z.speed = 1.0;
+                } else if (tier2Defeated && rand < 0.45) {
+                    z.color = "#0055ff"; z.type = "blue_sprinter"; z.speed *= 1.45;
+                } else if (tier1Defeated && rand < 0.80) {
+                    z.color = "#ff0000"; z.type = "red_stalker"; z.hp *= 1.25; z.maxHp *= 1.25;
+                }
+                
+                zombies.push(z);
+            }
+            zombieInterval = setTimeout(spawnZombie, Math.max(150, 1400 - (lvl * 18)));
         }
 
         function gameLoop() {
+            if(!isGameRunning) return;
             ctx.clearRect(0, 0, 800, 550);
 
             if (keys['w'] && player.y > player.size) player.y -= player.speed;
@@ -178,50 +252,125 @@
 
             player.angle = Math.atan2(mouseY - player.y, mouseX - player.x);
 
-            // DRAW 3D GROUND GRID EFFECTS
+            // Ground Arena Grid
             ctx.strokeStyle = "#223322"; ctx.lineWidth = 1;
             for(let i=0; i<800; i+=40) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,550); ctx.stroke(); }
             for(let j=0; j<550; j+=40) { ctx.beginPath(); ctx.moveTo(0,j); ctx.lineTo(800,j); ctx.stroke(); }
 
-            // DRAW PLAYER BODY (With 3D shadow offset)
-            ctx.fillStyle = "rgba(0,0,0,0.4)";
-            ctx.beginPath(); ctx.arc(player.x, player.y + 12, player.size, 0, Math.PI*2); ctx.fill();
-
+            // PLAYER MODEL
             ctx.save();
-            ctx.translate(player.x, player.y);
-            ctx.rotate(player.angle);
-            ctx.fillStyle = "#555"; ctx.fillRect(5, -5, 25, 6); // Gun Barrel
+            ctx.fillStyle = "red"; ctx.fillRect(player.x - 20, player.y - 32, 40, 5);
+            ctx.fillStyle = "#00ff00"; ctx.fillRect(player.x - 20, player.y - 32, (hp / 100) * 40, 5);
+            ctx.translate(player.x, player.y); ctx.rotate(player.angle);
+            ctx.fillStyle = "#555"; ctx.fillRect(5, -5, 25, 6);
             ctx.fillStyle = player.color;
             ctx.beginPath(); ctx.arc(0, 0, player.size, 0, Math.PI * 2); ctx.fill();
             ctx.fillStyle = "#e0a96d"; ctx.beginPath(); ctx.arc(0, 0, player.size*0.6, 0, Math.PI*2); ctx.fill();
             ctx.restore();
 
-            // BULLETS
-            ctx.fillStyle = "#ffff00";
+            // PLAYER PROJECTILES
             bullets.forEach((b, bIdx) => {
                 b.x += b.vx; b.y += b.vy;
-                ctx.fillRect(b.x - 3, b.y - 3, 6, 6);
+                ctx.fillStyle = b.color;
+                ctx.fillRect(b.x - Math.floor(b.size/2), b.y - Math.floor(b.size/2), b.size, b.size);
                 if (b.x < 0 || b.x > 800 || b.y < 0 || b.y > 550) bullets.splice(bIdx, 1);
 
                 zombies.forEach((z, zIdx) => {
                     if (Math.hypot(b.x - z.x, b.y - z.y) < 22) {
-                        zombies.splice(zIdx, 1); bullets.splice(bIdx, 1);
-                        cash += 15; playSound('hit'); updateUI();
+                        let dealt = b.dmg;
+                        if (player.perk === 'lucky' && Math.random() < 0.12) dealt = 999;
+                        z.hp -= dealt; b.life--; playSound('hit');
+                        if (z.hp <= 0) {
+                            zombies.splice(zIdx, 1);
+                            cash += player.perk === 'looter' ? 30 : 15;
+                            updateUI();
+                        }
+                        if (b.life <= 0) bullets.splice(bIdx, 1);
+                    }
+                });
+
+                bosses.forEach((boss, bossIdx) => {
+                    if (Math.hypot(b.x - boss.x, b.y - boss.y) < boss.size) {
+                        boss.hp -= b.dmg; b.life--; playSound('hit');
+                        if (boss.hp <= 0) {
+                            if(boss.tier === 1) tier1Defeated = true;
+                            if(boss.tier === 2) tier2Defeated = true;
+                            if(boss.tier === 3) tier3Defeated = true;
+                            if(boss.tier === 4) tier4Defeated = true;
+                            bosses.splice(bossIdx, 1);
+                            cash += player.perk === 'looter' ? 300 : 150;
+                            bossActive = false;
+                            updateUI();
+                        }
+                        if (b.life <= 0) bullets.splice(bIdx, 1);
                     }
                 });
             });
 
-            // ZOMBIES (With 3D drop shadow)
-            zombies.forEach(z => {
-                let zAngle = Math.atan2(player.y - z.y, player.x - z.x);
-                z.x += Math.cos(zAngle) * 1.5; z.y += Math.sin(zAngle) * 1.5;
-                
-                ctx.fillStyle = "rgba(0,0,0,0.4)";
-                ctx.beginPath(); ctx.arc(z.x, z.y + 10, 14, 0, Math.PI*2); ctx.fill();
+            // ENEMY PROJECTILES (PURPLE GUNNERS)
+            ctx.fillStyle = "#ff00ff";
+            enemyBullets.forEach((eb, ebIdx) => {
+                eb.x += eb.vx; eb.y += eb.vy;
+                ctx.fillRect(eb.x - 3, eb.y - 3, 6, 6);
+                if (eb.x < 0 || eb.x > 800 || eb.y < 0 || eb.y > 550) enemyBullets.splice(ebIdx, 1);
 
-                ctx.fillStyle = "#39e639";
+                if (Math.hypot(eb.x - player.x, eb.y - player.y) < player.size) {
+                    hp -= player.perk === 'tank' ? 2 : 4; // Deals significant direct damage
+                    enemyBullets.splice(ebIdx, 1);
+                    updateUI();
+                    if(hp <= 0) { isGameRunning = false; alert("SQUAD OUT-GUNNED! Game Over."); returnToMenu(); }
+                }
+            });
+
+            // ENEMY ZOMBIES TRACKING & AI LOGIC
+            zombies.forEach((z, zIdx) => {
+                let zAngle = Math.atan2(player.y - z.y, player.x - z.x);
+                z.x += Math.cos(zAngle) * z.speed; z.y += Math.sin(zAngle) * z.speed;
+                
+                ctx.fillStyle = z.color;
                 ctx.beginPath(); ctx.arc(z.x, z.y, 14, 0, Math.PI*2); ctx.fill();
-                ctx.fillStyle = "#ff0000"; ctx.fillRect(z.x + Math.cos(zAngle)*6 - 2, z.y + Math.sin(zAngle)*6 - 2, 4, 4);
+
+                // Draw tiny physical pistol on purple gunners
+                if (z.type === "purple_gunner") {
+                    ctx.save(); ctx.translate(z.x, z.y); ctx.rotate(zAngle);
+                    ctx.fillStyle = "#333"; ctx.fillRect(4, 2, 8, 3); ctx.restore();
+                    
+                    // Fire routine
+                    z.shootCooldown++;
+                    if (z.shootCooldown > 120) {
+                        enemyBullets.push({ x: z.x, y: z.y, vx: Math.cos(zAngle) * 5, vy: Math.sin(zAngle) * 5 });
+                        z.shootCooldown = 0;
+                    }
+                }
+                
+                ctx.fillStyle = "red"; ctx.fillRect(z.x - 12, z.y - 22, 24, 4);
+                ctx.fillStyle = "green"; ctx.fillRect(z.x - 12, z.y - 22, (z.hp / z.maxHp) * 24, 4);
+
+                if (Math.hypot(player.x - z.x, player.y - z.y) < player.size + 10) {
+                    hp -= player.perk === 'tank' ? 0.2 : 0.4;
+                    updateUI();
+                    if(hp <= 0) { isGameRunning = false; alert("SQUAD ELIMINATED! Game Over."); returnToMenu(); }
+                }
+            });
+
+            // MILESTONE BOSS RENDERING LOOP
+            bosses.forEach(boss => {
+                let bAngle = Math.atan2(player.y - boss.y, player.x - boss.x);
+                boss.x += Math.cos(bAngle) * boss.speed; boss.y += Math.sin(bAngle) * boss.speed;
+
+                ctx.fillStyle = "#9900ff";
+                ctx.beginPath(); ctx.arc(boss.x, boss.y, boss.size, 0, Math.PI*2); ctx.fill();
+                ctx.strokeStyle = "#ff00ff"; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.arc(boss.x, boss.y, boss.size + 4, 0, Math.PI*2); ctx.stroke();
+
+                ctx.fillStyle = "red"; ctx.fillRect(boss.x - 40, boss.y - 60, 80, 7);
+                ctx.fillStyle = "yellow"; ctx.fillRect(boss.x - 40, boss.y - 60, (boss.hp / boss.maxHp) * 80, 7);
+
+                if (Math.hypot(player.x - boss.x, player.y - boss.y) < boss.size + player.size) {
+                    hp -= player.perk === 'tank' ? 0.5 : 1.2;
+                    updateUI();
+                    if(hp <= 0) { isGameRunning = false; alert("BOSS CRUSHED THE SQUAD! Game Over."); returnToMenu(); }
+                }
             });
 
             requestAnimationFrame(gameLoop);
@@ -230,10 +379,10 @@
         function updateUI() {
             document.getElementById("ui-cash").innerText = cash;
             document.getElementById("ui-lvl").innerText = lvl;
+            document.getElementById("ui-hp-fill").style.width = Math.max(0, hp) + "%";
             document.getElementById("up-btn").innerText = `UPGRADE GUN ($${cost})`;
             document.getElementById("up-btn").disabled = cash < cost || lvl >= 100;
         }
-        updateUI();
     </script>
 </body>
 </html>
