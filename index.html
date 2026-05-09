@@ -1,116 +1,68 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Zombie Squad: Alien Awakening</title>
+    <title>Zombie.io | 3D Squad Survival</title>
     <style>
         body { background: #050505; color: #00ff00; font-family: 'Courier New', monospace; text-align: center; margin: 0; padding: 0; overflow: hidden; user-select: none; }
-        canvas { background: #111411; border: 4px solid #ff3300; cursor: crosshair; display: none; margin: 10px auto; box-shadow: 0 0 20px #ff3300; }
+        #canvas3d { display: none; width: 100vw; height: 85vh; }
         .screen { padding: 40px; max-width: 700px; margin: auto; height: 80vh; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .char-btn { padding: 15px; margin: 8px; background: #1a1a1a; color: #00ff00; border: 2px solid #00ff00; cursor: pointer; font-size: 18px; width: 220px; text-transform: uppercase; font-weight: bold; }
         .char-btn:hover { background: #00ff00; color: black; box-shadow: 0 0 15px #00ff00; }
-        #ui-box { background: rgba(0,0,0,0.9); padding: 12px; border-bottom: 3px solid #ff3300; display: none; justify-content: space-around; font-size: 18px; font-weight: bold; }
+        #ui-box { background: rgba(0,0,0,0.9); padding: 12px; border-bottom: 3px solid #ff3300; display: none; justify-content: space-around; font-size: 18px; font-weight: bold; height: 10vh; box-sizing: border-box; }
         .btn-upgrade { background: #ff3300; color: white; border: none; padding: 8px 16px; cursor: pointer; font-weight: bold; border-radius: 4px; }
-        .btn-upgrade:disabled { background: #444; color: #777; cursor: not-allowed; }
         #cutscene-text { font-size: 22px; line-height: 1.6; color: #ffffff; text-shadow: 0 0 8px #ff0000; min-height: 150px; }
         .next-btn { background: #fff; color: #000; border: none; padding: 10px 25px; font-size: 18px; cursor: pointer; font-weight: bold; margin-top: 20px; }
     </style>
+    <!-- We load the Three.js library from a secure web network -->
+    <script src="cloudflare.com"></script>
 </head>
 <body>
 
-    <!-- CUTSCENE SCREEN -->
+    <!-- INTRO CUTSCENE -->
     <div id="cutscene-screen" class="screen">
         <h2 style="color: #ff3300; font-size: 32px;">⚠️ EMERGENCY BROADCAST ⚠️</h2>
         <div id="cutscene-text">Loading transmission...</div>
         <button id="cutscene-btn" class="next-btn" onclick="nextCutscene()">NEXT</button>
     </div>
 
-    <!-- CHARACTER SELECTION -->
+    <!-- SQUAD MENU -->
     <div id="menu-screen" class="screen" style="display:none;">
         <h1>THE OUTBREAK HAS BEGUN</h1>
         <h3>SELECT YOUR SURVIVOR:</h3>
         <div style="display: flex; flex-wrap: wrap; justify-content: center; max-width: 500px;">
-            <button class="char-btn" onclick="startGame('Shuceeb', '#00fffff')">Shuceeb</button>
-            <button class="char-btn" onclick="startGame('Aadam', '#ff0055')">Aadam</button>
-            <button class="char-btn" onclick="startGame('Yakoub', '#ffcc00')">Yakoub</button>
-            <button class="char-btn" onclick="startGame('Daiyon', '#9900ff')">Daiyon</button>
-            <button class="char-btn" onclick="startGame('Arafat', '#00ff66')">Arafat</button>
-            <button class="char-btn" onclick="startGame('Naythan', '#ff6600')">Naythan</button>
+            <button class="char-btn" onclick="startGame('Shuceeb', 0x00ffff)">Shuceeb</button>
+            <button class="char-btn" onclick="startGame('Aadam', 0xff0055)">Aadam</button>
+            <button class="char-btn" onclick="startGame('Yakoub', 0xffcc00)">Yakoub</button>
+            <button class="char-btn" onclick="startGame('Daiyon', 0x9900ff)">Daiyon</button>
+            <button class="char-btn" onclick="startGame('Arafat', 0x00ff66)">Arafat</button>
+            <button class="char-btn" onclick="startGame('Naythan', 0xff6600)">Naythan</button>
         </div>
     </div>
 
-    <!-- GAME UI & ARENA -->
+    <!-- HUD STATS BOARD -->
     <div id="ui-box">
         <div>Survivor: <span id="ui-name" style="color:yellow;">---</span></div>
         <div>Cash: $<span id="ui-cash">0</span></div>
         <div>Gun Level: <span id="ui-lvl">1</span>/100</div>
-        <div id="ui-ability" style="color: cyan;">No Perks Locked</div>
         <button id="up-btn" class="btn-upgrade" onclick="buyUpgrade()">UPGRADE GUN ($50)</button>
     </div>
-    <canvas id="gameCanvas" width="800" height="550"></canvas>
+
+    <div id="canvas3d"></div>
 
     <script>
-        // Web Audio Synthesizer Engine
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playSound(type) {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            
-            if (type === 'shoot') {
-                osc.type = lvl >= 10 ? 'sawtooth' : 'triangle';
-                osc.frequency.setValueAtTime(lvl >= 10 ? 120 : 300, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
-                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-            } else if (type === 'hit') {
-                const notes = [130.81, 146.83, 164.81, 196.00];
-                osc.frequency.setValueAtTime(80, audioCtx.currentTime);
-                osc.frequency.linearRampToValueAtTime(20, audioCtx.currentTime + 0.15);
-                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.15);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.15);
-            } else if (type === 'lvl') {
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(200, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.4);
-                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.4);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.4);
-            }
-        }
-
-        // Music Loop System
-        function startMusic() {
-            setInterval(() => {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.connect(gain); gain.connect(audioCtx.destination);
-                osc.type = 'sine';
-                const notes = [110, 130, 98, 146];
-                osc.frequency.setValueAtTime(notes[Math.floor(Math.random() * notes.length)], audioCtx.currentTime);
-                gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
-                gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.4);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.4);
-            }, 400);
-        }
-
-        // Cutscene Script Configuration
+        // Intro Text Setup
         const cutsceneLines = [
-            "Shuceeb, Aadam, Yakoub, Daiyon, Arafat, and Naythan were chilled out at their house, screen-glued and playing video games together...",
-            "Suddenly, the power cuts out. The TV screen flashes static, replacing the game with an emergency news alert.",
-            "Mr. Trump appears on screen, sweating and breathing heavily: 'My fellow Americans... something has gone horribly wrong inside our classified research labs...'",
-            "'...A rogue scientist accidentally dropped and cracked open a mysterious Alien Egg asset. A viral spore is turning the city into flesh-eating monsters!'",
-            "Outside the window, blood-curdling screeches echo down the street. The friend squad is absolutely terrified. They scramble to lock doors and find weapons to survive..."
+            "Shuceeb, Aadam, Yakoub, Daiyon, Arafat, and Naythan were chilled out at their house playing video games together...",
+            "Suddenly, the power cuts out. The TV flashes static, replacing the game with an emergency news alert.",
+            "Mr. Trump appears on screen: 'My fellow Americans... a rogue scientist accidentally dropped and cracked open a mysterious Alien Egg asset...'",
+            "Outside the window, loud alien screeches echo down the street. The friend squad is terrified. Time to fight!'"
         ];
         let cutsceneIdx = 0;
         function nextCutscene() {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
             cutsceneIdx++;
             if (cutsceneIdx < cutsceneLines.length) {
                 document.getElementById("cutscene-text").innerText = cutsceneLines[cutsceneIdx];
-                if (cutsceneIdx === cutsceneLines.length - 1) document.getElementById("cutscene-btn").innerText = "ENTER THE APOCALYPSE";
+                if (cutsceneIdx === cutsceneLines.length - 1) document.getElementById("cutscene-btn").innerText = "ENTER THE 3D APOCALYPSE";
             } else {
                 document.getElementById("cutscene-screen").style.display = "none";
                 document.getElementById("menu-screen").style.display = "flex";
@@ -118,168 +70,140 @@
         }
         document.getElementById("cutscene-text").innerText = cutsceneLines[0];
 
-        // Global Core Mechanics Variables
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
-        let cash = 0, lvl = 1, cost = 50;
-        let player = { x: 400, y: 275, size: 18, color: '#00ffff', speed: 4, angle: 0 };
+        // 3D Engine Variables
+        let scene, camera, renderer, playerMesh;
+        let cash = 0, lvl = 1, cost = 50, playerSpeed = 0.15;
         let bullets = [], zombies = [], keys = {};
-        let mouseX = 0, mouseY = 0;
+        let planeSize = 40;
 
-        function startGame(name, color) {
-            player.color = color;
-            document.getElementById("ui-name").innerText = name;
-            document.getElementById("ui-name").style.color = color;
+        function startGame(name, colorHex) {
             document.getElementById("menu-screen").style.display = "none";
             document.getElementById("ui-box").style.display = "flex";
-            canvas.style.display = "block";
-            startMusic();
-            spawnZombie();
-            requestAnimationFrame(gameLoop);
+            document.getElementById("canvas3d").style.display = "block";
+            document.getElementById("ui-name").innerText = name;
+
+            // 1. Create the 3D Scene World Container
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x050505);
+
+            // 2. Set Up 3D Camera Viewing Rig
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / (window.innerHeight * 0.85), 0.1, 1000);
+            camera.position.set(0, 20, 12); // High isometric view pointing down at squad
+            camera.lookAt(0, 0, 0);
+
+            // 3. Render Initialization
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight * 0.85);
+            document.getElementById("canvas3d").appendChild(renderer.domElement);
+
+            // 4. Lights Setup
+            const light = new THREE.DirectionalLight(0xffffff, 1);
+            light.position.set(5, 20, 5);
+            scene.add(light);
+            scene.add(new THREE.AmbientLight(0x333333));
+
+            // 5. Build 3D Floor Grid Field
+            const grid = new THREE.GridHelper(planeSize, 40, 0xff3300, 0x222222);
+            grid.position.y = -0.5;
+            scene.add(grid);
+
+            // 6. Spawn the Player Box Character Node Shape
+            const playerGeo = new THREE.BoxGeometry(1, 1, 1);
+            const playerMat = new THREE.MeshStandardMaterial({ color: colorHex });
+            playerMesh = new THREE.Mesh(playerGeo, playerMat);
+            scene.add(playerMesh);
+
+            // Inputs
+            window.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
+            window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+            window.addEventListener("mousedown", fire3DBullet);
+
+            setInterval(spawn3DZombie, 1500);
+            animate3D();
+        }
+
+        function fire3DBullet() {
+            // Shoots forward along the player direction axis orientation
+            const bGeo = new THREE.SphereGeometry(0.15, 8, 8);
+            const bMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+            const bMesh = new THREE.Mesh(bGeo, bMat);
+            bMesh.position.set(playerMesh.position.x, playerMesh.position.y, playerMesh.position.z);
+            
+            // Calculate direction using simple rotation vector matrix logic
+            let angle = playerMesh.rotation.y;
+            bullets.push({ mesh: bMesh, vx: Math.sin(angle) * 0.4, vz: Math.cos(angle) * 0.4 });
+            scene.add(bMesh);
+        }
+
+        function spawn3DZombie() {
+            const zGeo = new THREE.BoxGeometry(0.9, 0.9, 0.9);
+            const zMat = new THREE.MeshStandardMaterial({ color: 0x39e639 });
+            const zMesh = new THREE.Mesh(zGeo, zMat);
+            
+            // Random point around floor boundary perimeter circle edges
+            let randAngle = Math.random() * Math.PI * 2;
+            zMesh.position.set(Math.cos(randAngle) * 18, 0, Math.sin(randAngle) * 18);
+            zombies.push(zMesh);
+            scene.add(zMesh);
         }
 
         function buyUpgrade() {
             if (cash >= cost && lvl < 100) {
-                cash -= cost;
-                lvl++;
-                cost = Math.floor(cost * 1.25);
-                playSound('lvl');
+                cash -= cost; lvl++; cost = Math.floor(cost * 1.3);
+                playerSpeed += 0.02;
+                document.getElementById("ui-cash").innerText = cash;
+                document.getElementById("ui-lvl").innerText = lvl;
+                document.getElementById("up-btn").innerText = `UPGRADE GUN ($${cost})`;
+            }
+        }
+
+        function animate3D() {
+            requestAnimationFrame(animate3D);
+
+            // Keyboard Movement Inputs Vector Logic Processing Loop
+            if (keys['w']) { playerMesh.position.z -= playerSpeed; playerMesh.rotation.y = Math.PI; }
+            if (keys['s']) { playerMesh.position.z += playerSpeed; playerMesh.rotation.y = 0; }
+            if (keys['a']) { playerMesh.position.x -= playerSpeed; playerMesh.rotation.y = -Math.PI/2; }
+            if (keys['d']) { playerMesh.position.x += playerSpeed; playerMesh.rotation.y = Math.PI/2; }
+
+            // Dynamic 3D Camera Follow Matrix Tracking Logic Anchor Point Target
+            camera.position.x = playerMesh.position.x;
+            camera.position.z = playerMesh.position.z + 12;
+            camera.lookAt(playerMesh.position);
+
+            // Move Bullets Translation Actions
+            bullets.forEach((b, idx) => {
+                b.mesh.position.x += b.vx;
+                b.mesh.position.z += b.vz;
                 
-                let abText = "Standard Gear";
-                if (lvl >= 10) { player.speed = 6.5; abText = "⚡ LVL 10: Turbo Sprint Enabled!"; }
-                if (lvl >= 20) abText = "🔥 LVL 20: Triple Bullet Spread!";
-                if (lvl >= 30) abText = "💥 LVL 30: Laser Piercing Ammo!";
-                if (lvl >= 40) abText = "🛡️ LVL 40: Energy Kinetic Shield Active!";
-                if (lvl >= 100) abText = "👑 LVL 100: GOD MODE COMMANDER!";
+                if(b.mesh.position.length() > 30) {
+                    scene.remove(b.mesh); bullets.splice(idx, 1);
+                }
+            });
+
+            // Zombie Chase Character Translation Iteration Cycle
+            zombies.forEach((z, zIdx) => {
+                let dirX = playerMesh.position.x - z.position.x;
+                let dirZ = playerMesh.position.z - z.position.z;
+                let dist = Math.hypot(dirX, dirZ);
                 
-                document.getElementById("ui-ability").innerText = abText;
-                updateUI();
-            }
-        }
-
-        // Input Capture Actions
-        window.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
-        window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
-        window.addEventListener("mousemove", e => {
-            const rect = canvas.getBoundingClientRect();
-            mouseX = e.clientX - rect.left;
-            mouseY = e.clientY - rect.top;
-        });
-        canvas.addEventListener("mousedown", () => {
-            if (canvas.style.display === "block") fireWeapon();
-        });
-
-        function fireWeapon() {
-            playSound('shoot');
-            const bSpeed = 8 + (lvl * 0.15);
-            const baseAngle = Math.atan2(mouseY - player.y, mouseX - player.x);
-            const pierceCount = lvl >= 30 ? 4 : 1;
-
-            if (lvl >= 20) { // Spread Shots
-                bullets.push({ x: player.x, y: player.y, vx: Math.cos(baseAngle - 0.2) * bSpeed, vy: Math.sin(baseAngle - 0.2) * bSpeed, life: pierceCount });
-                bullets.push({ x: player.x, y: player.y, vx: Math.cos(baseAngle) * bSpeed, vy: Math.sin(baseAngle) * bSpeed, life: pierceCount });
-                bullets.push({ x: player.x, y: player.y, vx: Math.cos(baseAngle + 0.2) * bSpeed, vy: Math.sin(baseAngle + 0.2) * bSpeed, life: pierceCount });
-            } else { // Single Shot
-                bullets.push({ x: player.x, y: player.y, vx: Math.cos(baseAngle) * bSpeed, vy: Math.sin(baseAngle) * bSpeed, life: pierceCount });
-            }
-        }
-
-        function spawnZombie() {
-            let side = Math.floor(Math.random() * 4);
-            let z = { x: 0, y: 0, hp: 1 + Math.floor(lvl/15) };
-            if(side === 0) { z.x = Math.random()*800; z.y = -30; }
-            else if(side === 1) { z.x = 830; z.y = Math.random()*550; }
-            else if(side === 2) { z.x = Math.random()*800; z.y = 580; }
-            else { z.x = -30; z.y = Math.random()*550; }
-            zombies.push(z);
-            setTimeout(spawnZombie, Math.max(150, 1600 - (lvl * 15)));
-        }
-
-        function gameLoop() {
-            ctx.clearRect(0, 0, 800, 550);
-
-            // Handle Character Movement Tracking
-            if (keys['w'] && player.y > player.size) player.y -= player.speed;
-            if (keys['s'] && player.y < 550 - player.size) player.y += player.speed;
-            if (keys['a'] && player.x > player.size) player.x -= player.speed;
-            if (keys['d'] && player.x < 800 - player.size) player.x += player.speed;
-
-            player.angle = Math.atan2(mouseY - player.y, mouseX - player.x);
-
-            // Render Character Layout Body Shape (Top-Down POV)
-            ctx.save();
-            ctx.translate(player.x, player.y);
-            ctx.rotate(player.angle);
-            
-            // Draw Hands/Gun Frame
-            ctx.fillStyle = "#555555";
-            ctx.fillRect(5, -6, 22, 5); // Rifle barrel length
-            ctx.fillStyle = player.color;
-            ctx.beginPath(); ctx.arc(0, -10, 6, 0, Math.PI*2); ctx.fill(); // Left Hand
-            ctx.beginPath(); ctx.arc(8, 6, 6, 0, Math.PI*2); ctx.fill(); // Right Hand Base
-
-            // Draw Torso Body Core Profile
-            ctx.fillStyle = player.color;
-            ctx.beginPath();
-            ctx.arc(0, 0, player.size, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.lineWidth = 3; ctx.strokeStyle = "#ffffff"; ctx.stroke();
-
-            // Head Center Overlay Node
-            ctx.fillStyle = "#e0a96d";
-            ctx.beginPath(); ctx.arc(0, 0, player.size * 0.6, 0, Math.PI*2); ctx.fill();
-            ctx.restore();
-
-            // Render Defensive Shield Visual Ring Option
-            if (lvl >= 40) {
-                ctx.strokeStyle = "rgba(0, 255, 255, 0.4)";
-                ctx.lineWidth = 4;
-                ctx.beginPath(); ctx.arc(player.x, player.y, player.size + 15, 0, Math.PI*2); ctx.stroke();
-            }
-
-            // Projectile Vector Simulation Iterations
-            ctx.fillStyle = lvl >= 30 ? "#00ffff" : "#ffff00";
-            bullets.forEach((b, bIdx) => {
-                b.x += b.vx; b.y += b.vy;
-                ctx.fillRect(b.x - 3, b.y - 3, 7, 7);
-
-                if (b.x < 0 || b.x > 800 || b.y < 0 || b.y > 550) {
-                    bullets.splice(bIdx, 1);
+                if (dist > 0.1) {
+                    z.position.x += (dirX / dist) * 0.04;
+                    z.position.z += (dirZ / dist) * 0.04;
                 }
 
-                zombies.forEach((z, zIdx) => {
-                    if (Math.hypot(b.x - z.x, b.y - z.y) < 22) {
-                        z.hp--;
-                        b.life--;
-                        playSound('hit');
-                        if (z.hp <= 0) { zombies.splice(zIdx, 1); cash += 15; updateUI(); }
-                        if (b.life <= 0) bullets.splice(bIdx, 1);
+                // Bullet Collision Intersects Tests Loops Checkpoints
+                bullets.forEach((b, bIdx) => {
+                    if (z.position.distanceTo(b.mesh.position) < 0.8) {
+                        scene.remove(z); zombies.splice(zIdx, 1);
+                        scene.remove(b.mesh); bullets.splice(bIdx, 1);
+                        cash += 15;
+                        document.getElementById("ui-cash").innerText = cash;
                     }
                 });
             });
 
-            // Zombie Chase Physics Loops
-            ctx.fillStyle = "#39e639";
-            zombies.forEach(z => {
-                let zAngle = Math.atan2(player.y - z.y, player.x - z.x);
-                z.x += Math.cos(zAngle) * (1.2 + (lvl * 0.015));
-                z.y += Math.sin(zAngle) * (1.2 + (lvl * 0.015));
-                
-                // Draw Zombie Figure Circle Structure
-                ctx.beginPath(); ctx.arc(z.x, z.y, 14, 0, Math.PI*2); ctx.fill();
-                ctx.fillStyle = "#ff0000"; // Zombie red focal points
-                ctx.fillRect(z.x + Math.cos(zAngle)*8 - 2, z.y + Math.sin(zAngle)*8 - 2, 4, 4);
-                ctx.fillStyle = "#39e639";
-            });
-
-            requestAnimationFrame(gameLoop);
-        }
-
-        function updateUI() {
-            document.getElementById("ui-cash").innerText = cash;
-            document.getElementById("ui-lvl").innerText = lvl;
-            document.getElementById("up-btn").innerText = `UPGRADE GUN ($${cost})`;
-            document.getElementById("up-btn").disabled = cash < cost || lvl >= 100;
+            renderer.render(scene, camera);
         }
     </script>
 </body>
